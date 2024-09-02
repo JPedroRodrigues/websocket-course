@@ -9,7 +9,7 @@ function portLog(port) {
 }
 
 const app = express();
-const port = process.env.port || 3000;
+const port = process.env.port || 5000;
 
 const currentPath = url.fileURLToPath(import.meta.url)
 const publicDir = path.join(currentPath, "../..", "public");
@@ -20,4 +20,4 @@ httpServer.listen(port, portLog(port));
 
 const io = new Server(httpServer);
 
-io.on("connection", () => console.log("A client has connected"));
+export default io;
