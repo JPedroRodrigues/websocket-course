@@ -1,14 +1,41 @@
 import io from "./server.js"
 
+const documents = [
+    {
+        name: "JavaScript",
+        text: "JavaScript text...",
+    },
+    {
+        name: "Node",
+        text: "Node text...",
+    },
+    {
+        name: "Socket.io",
+        text: "Socket.io text...",
+    },
+];
+
+function findDocument(documentName) {
+    const document = documents.find(document => document.name === documentName);
+
+    return document;
+}
+
 io.on("connection", (socket) => {
     console.log(`A client has connected. Client ID: ${socket.id}`);
 
-    socket.on("select-document", (documentName) => {
+    socket.on("select-document", (documentName, returnText) => {
         // Place client connections into the same room
         socket.join(documentName);
+
+        const doc = findDocument(documentName);
+
+        if (doc) {
+            returnText(doc.text);
+        }
     });
 
-    socket.on("editor-text", (textData) => {
+    socket.on("editor-text", ({ documentText, documentName }) => {
         // send to every single client including its own
         // io.emit("client-editor-text", text)
 
@@ -27,7 +54,12 @@ io.on("connection", (socket) => {
         // io.except("sala_excluida").emit("nome_do_evento");
         // socket.broadcast.except(["sala_excluida_1", "sala_excluida_2"]).emit("nome_do_evento");
 
-        socket.to(textData["documentName"]).emit("client-editor-text", textData["documentText"]);
+        const document = findDocument(documentName);
+
+        if (document) {
+            document.text = documentText;
+            socket.to(documentName).emit("client-editor-text", documentText);
+        }
     });
 
     socket.on("disconnect", (cause) => {
