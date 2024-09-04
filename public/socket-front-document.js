@@ -7,11 +7,13 @@ export function emitEditorText(textData) {
 }
 
 export function selectDocument(name) {
-    socket.emit("select-document", name);
+    socket.emit("select-document", name, (text) => {
+        updateEditorText(text);
+    });
 }
 
 socket.on("client-editor-text", (text) => {
-    updateEditorText(text)
+    updateEditorText(text);
 });
 
 export default { emitEditorText, selectDocument };
