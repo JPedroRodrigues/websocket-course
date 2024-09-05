@@ -1,41 +1,52 @@
-import io from "./server.js"
-
-const documents = [
-    {
-        name: "JavaScript",
-        text: "JavaScript text...",
-    },
-    {
-        name: "Node",
-        text: "Node text...",
-    },
-    {
-        name: "Socket.io",
-        text: "Socket.io text...",
-    },
-];
-
-function findDocument(documentName) {
-    const document = documents.find(document => document.name === documentName);
-
-    return document;
-}
+import io from "./server.js";
+import { addDocument, deleteDocument, findDocument, getDocuments, updateDocument } from "./documentsDb.js";
 
 io.on("connection", (socket) => {
     console.log(`A client has connected. Client ID: ${socket.id}`);
 
-    socket.on("select-document", (documentName, returnText) => {
+    socket.on("get-documents", async (returnDocuments) => {
+        const documents = await getDocuments();
+        returnDocuments(documents);
+    });
+
+    socket.on("post-document", async (documentName) => {
+        const documentExists = await findDocument(documentName);
+        if (documentExists) {
+            socket.emit("document-exists", documentName);
+            return;
+        }
+
+        const result = await addDocument(documentName);
+        
+        if (result.acknowledged) {
+            io.emit("post-document-interface", documentName);
+        }
+    });
+
+    socket.on("delete-document", async (documentName) => {
+        const result = await deleteDocument(documentName);
+
+        if (!result.acknowledged) {
+            socket.emit("delete-document-failed", documentName);
+            return;
+        }
+
+        io.emit("delete-document-success", documentName);
+    });
+
+    socket.on("select-document", async (documentName, returnText) => {
         // Place client connections into the same room
         socket.join(documentName);
 
-        const doc = findDocument(documentName);
+        const doc = await findDocument(documentName);
 
         if (doc) {
+            console.log(doc);
             returnText(doc.text);
         }
     });
 
-    socket.on("editor-text", ({ documentText, documentName }) => {
+    socket.on("editor-text", async ({ documentText, documentName }) => {
         // send to every single client including its own
         // io.emit("client-editor-text", text)
 
@@ -54,10 +65,9 @@ io.on("connection", (socket) => {
         // io.except("sala_excluida").emit("nome_do_evento");
         // socket.broadcast.except(["sala_excluida_1", "sala_excluida_2"]).emit("nome_do_evento");
 
-        const document = findDocument(documentName);
+        const update = await updateDocument(documentName, documentText);
 
-        if (document) {
-            document.text = documentText;
+        if (update.modifiedCount) {
             socket.to(documentName).emit("client-editor-text", documentText);
         }
     });

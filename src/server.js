@@ -4,6 +4,8 @@ import path from "path";
 import http from "http"
 import { Server } from "socket.io"
 
+import "./DbConnect.js"
+
 function portLog(port) {
     console.log(`Server running at port ${port}`)
 }
